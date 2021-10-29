@@ -1,6 +1,6 @@
-# Restore-IntuneDiagData.ps1
+# Format-IntuneDiagData.ps1
 
-Restore-IntuneDiagData.ps1 is a stand-alone script to organize data collected by the [Intune collect diagnostics](https://docs.microsoft.com/en-us/mem/intune/remote-actions/collect-diagnostics) device action.
+Format-IntuneDiagData.ps1 (FIDD) is a stand-alone script to organize data collected by the [Intune collect diagnostics](https://docs.microsoft.com/en-us/mem/intune/remote-actions/collect-diagnostics) device action.
 
 This script will organize the [collected data](https://docs.microsoft.com/en-us/mem/intune/remote-actions/collect-diagnostics#data-collected) in to a logical folder structure and renames the files to reflect their contents.
 
@@ -9,12 +9,12 @@ This script will organize the [collected data](https://docs.microsoft.com/en-us/
 
 Use these steps to run this utility:
 
-1. Create a temporary folder, download [Restore-IntuneDiagData.ps1](https://raw.githubusercontent.com/markstan/Restore-IntuneDiagData/master/Restore-IntuneDiagData.ps1) from this repo and save the file to this folder.
-1. Download the device diagnostics data from the [MEM portal](https://endpoint.microsoft.com/#blade/Microsoft_Intune_DeviceSettings/DevicesMenu/mDMDevicesPreview) (Home &gt; Devices &gt; All devices &gt; &lt;DeviceName&gt; &gt; Device diagnostics &gt; Download).  Place the file in the same folder as Restore-IntuneDiagData.ps1.
-1. Open a PowerShell window and run **.\Restore-IntuneDiagData.ps1**.  If you launch the script from the folder where the zip file is located, no additional parameters are required.  Otherwise, specify the location of the zip file using the **-ArchiveName**  command-line switch.  
+1. Create a temporary folder, download [Format-IntuneDiagData.ps1](https://raw.githubusercontent.com/markstan/Format-IntuneDiagData/master/Format-IntuneDiagData.ps1) from this repo and save the file to this folder.
+1. Download the device diagnostics data from the [MEM portal](https://endpoint.microsoft.com/#blade/Microsoft_Intune_DeviceSettings/DevicesMenu/mDMDevicesPreview) (Home &gt; Devices &gt; All devices &gt; &lt;DeviceName&gt; &gt; Device diagnostics &gt; Download).  Place the file in the same folder as Format-IntuneDiagData.ps1.
+1. Open a PowerShell window and run **.\Format-IntuneDiagData.ps1**.  If you launch the script from the folder where the zip file is located, no additional parameters are required.  Otherwise, specify the location of the zip file using the **-ArchiveName**  command-line switch.  
 **Example:**
     ```powershell-interactive
-     .\Restore-IntuneDiagData.ps1 -ArchiveName c:\temp\DiagLogs-Computer01-20210029T175224Z.zip
+     .\Format-IntuneDiagData.ps1 -ArchiveName c:\temp\DiagLogs-Computer01-20210029T175224Z.zip
     ```
 1. The script will copy data and rename files as appropriate.  Embedded CAB files (mpsupportfiles.cab and mdmlogs*.cab) will be extracted to a subfolder.  When the script completes, it will launch Windows Explorer in the folder where the  extracted data has been copied.
 
@@ -35,7 +35,7 @@ A: The Intune collect diagnostics feature provides admins a simple way to collec
 
 Q: Where is the data stored?
 
-A: Files are copied from the extracted zip archive to %temp%\IntuneDeviceData.
+A: Files are extracted to the current folder by default in a subfolder named **IntuneDeviceData**.
 
 Q:  I'd like to add addtional files to the collected data.  Where can I suggest changes to this feature?
 
