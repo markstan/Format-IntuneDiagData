@@ -119,7 +119,7 @@ function Parse_Outputlog {
         }
     
     else {
-        $ParsedFilename = "Unknow_Command_Result_" + $(Get-Random -Maximum 10000000 -Minimum 1000000) + ".txt"
+        $ParsedFilename = "Unknown_Command_Result_" + $(Get-Random -Maximum 10000000 -Minimum 1000000) + ".txt"
     }
 
 
