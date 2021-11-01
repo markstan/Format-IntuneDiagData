@@ -4,7 +4,7 @@ Format-IntuneDiagData.ps1 (FIDD) is a stand-alone script to organize data collec
 
 This script will organize the [collected data](https://docs.microsoft.com/en-us/mem/intune/remote-actions/collect-diagnostics#data-collected) in to a logical folder structure and renames the files to reflect their contents.
 
-![FIDD output](https://raw.githubusercontent.com/markstan/Format-IntuneDiagData/master/FIDD.png)
+![FIDD output](https://github.com/markstan/Format-IntuneDiagData/blob/main/FIDD.png)
 
 ## Usage
 
