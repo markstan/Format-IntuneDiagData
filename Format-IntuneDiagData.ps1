@@ -4,9 +4,11 @@ Format-IntuneDiagData.ps1
 
 Format-IntuneDiagData.ps1 (FIDD) is a utility script to extract and organize zip archive created using the 'Collect diagnostics' feature in Microsoft Endpoint Mananger Intune (MEM).
 
-Author:  Mark Stanfill
-Email: markstan@microsoft.com
+Author:       Mark Stanfill
+Email:        markstan@microsoft.com
 Date created: 10/27/2021
+Last update:  12/4/2021
+Version:      2021.12.1
 
   
 
@@ -25,10 +27,12 @@ Param (
     $ArchiveName,                 # name of zip file
     [Alias("Out")]
     $OutFolder  = $PWD,           # location to create output folder
-    [switch]$NoUnzip              # do not extract zip file if present.  Use if zip file exists and has aleady been extracted
+    [switch]$NoUnzip,             # do not extract zip file if present.  Use if zip file exists and has aleady been extracted
+    [switch]$LeaveCABs            # retain folder structure for extracted MMDDiagnostics and other cab-based collectors 
 )
  
-$RIDDversion = "2021.10.2" 
+
+$RIDDversion = "2021.12.1" 
 $ErrorActionPreference = "Stop" 
 
 function Get-RegPath {
@@ -141,11 +145,27 @@ function New-DiagFolderStructure {
 
     $null = mkdir $tempfolder\Registry  -Force
     $null = mkdir $tempfolder\EventLogs -Force
-    $null = mkdir $tempfolder\MetaData  -Force
+    $null = mkdir $tempfolder\z_MetaData  -Force
 
 }
 
+# test to see if script is being ran from already expanded folder structure
+function Test-IsExpandedFolderStructure {
+    [bool]$isExpandedDiagFolder = $false
+    
+    $folderStructure  = Get-ChildItem $PWD
+    # assume we are in diagfolder expanded if more than 40 numerical folders 
+    if ( ($folderStructure.Name -match "^\d+$").count -gt 40){
+        $isExpandedDiagFolder = $true
+    }
+
+    return $isExpandedDiagFolder
+    
+}
+
+
 function Test-AndExpandArchive {
+    [string]$folderName = ""
 
     if  ($null -eq $ArchiveName) {
 
@@ -159,17 +179,24 @@ function Test-AndExpandArchive {
             else {
                 Expand-Archive $ArchiveName -Force # overwrite files if they exist
             }
+            $folderName = [System.IO.Path]::GetFileNameWithoutExtension($ArchiveName)
+        }
+        elseif (Test-IsExpandedFolderStructure) {
+            Write-Host "Expanded zip structure detected"
+            $folderName = $PWD
         }
         else {
+            
             Write-Host "Unable to locate zip file.  Please check that the file exists in the current directory or specify the -ArchiveName command line parameter."  -ForegroundColor Red
-    
+            Exit -1
         }
     }
+ 
     else {
         Expand-Archive $ArchiveName -Force
     }
     # return folder name
-    [System.IO.Path]::GetFileNameWithoutExtension($ArchiveName)
+    $folderName
 }
 
 function Move-EventLogData {
@@ -228,9 +255,7 @@ foreach ( $diagfolder  in $diagfolders) {
     # ### Windows Update
 
     elseif (Test-Path "$fullDiagPath\windowsupdate.*.etl") {
-        ### *** UNCOMMENT
-
-      #$null =  Get-WindowsUpdateLog -ETLPath $fullDiagPath -LogPath $tempfolder\WindowsUpdate.log
+         $null =  Get-WindowsUpdateLog -ETLPath $fullDiagPath -LogPath $tempfolder\WindowsUpdate.log | Out-Null 
     }
 
     # ### ConfigMgr client logs
@@ -260,15 +285,17 @@ foreach ( $diagfolder  in $diagfolders) {
 
     elseif (Test-Path "$fullDiagPath\intunemanagementextension.log") {
         $SideCar = Join-Path $tempfolder Intune_Management_Extension_Logs
-        $null = mkdir $SideCar
-        Copy-Item $fullDiagPath\* $SideCar
+        $null = mkdir $SideCar -Force
+        Copy-Item $fullDiagPath\*intunemanagementextension*.log $SideCar
+        Copy-Item $fullDiagPath\*agentexecutor*.log $SideCar
+        Copy-Item $fullDiagPath\*sensor*.log $SideCar
     }
 
     # ### Autopilot ETLs
 
     elseif (Test-Path "$fullDiagPath\diagnosticlogcsp_collector_autopilot*.etl") {
-        $ApETLs = Join-Path $tempfolder Autopilot_ETL_Logs
-        $null = mkdir $ApETLs
+        $ApETLs = Join-Path $tempfolder z_ETL_Logs
+        $null = mkdir $ApETLs  -Force
         Copy-Item $fullDiagPath\* $ApETLs
     }
 
@@ -277,29 +304,63 @@ foreach ( $diagfolder  in $diagfolders) {
     elseif ( (Test-Path "$fullDiagPath\*.html") -or (Test-Path "$fullDiagPath\msinfo32.log") -or (Test-Path "$fullDiagPath\cbs.log") 
              ) {
          
-        Copy-Item $fullDiagPath\*   $tempfolder
+        Copy-Item $fullDiagPath\*   $tempfolder -Force -ErrorAction SilentlyContinue
     }
 
     # ### Cab files.  Automatically extract
     elseif (Test-Path "$fullDiagPath\*.cab") {
         $cabFolder = ""
         $cabName = ""
-        $baseName = ""
+        $extractedFolderName = ""
 
         $cabName = (Get-ChildItem "$fullDiagPath\*.cab").Name
-        $baseName =  $cabName -replace ".cab", ""
-
-        $cabFolder = Join-Path $tempfolder $( $basename + "_extracted")
+        "##### $cabname"
+        $extractedFolderName = "z_" + $($cabname -replace ".cab", "_extracted")
+        $cabFolder = Join-Path $tempfolder  $extractedFolderName
         $null = mkdir $cabFolder     
          
         $null = expand $fullDiagPath\$cabName -I -F:* $cabFolder 
         
 
         # mdmlogs has embedded CAB
-
         if (Test-Path $cabFolder\*.cab) {
             $null = expand $cabFolder\*.cab   -F:* $cabFolder 
         } 
+
+        if (-not ($LeaveCABs)) {          
+            # Organize extracted files
+            Move-Item $cabFolder\*.evtx "$tempfolder\EventLogs"  -Force
+            # TODO - make this more generic
+            if (Test-Path $cabFolder\CLIP) {
+                Move-Item $cabFolder\CLIP\*.evtx "$tempfolder\EventLogs"  -Force
+                Move-Item $cabFolder\CLIP\dsregcmd.txt "$tempfolder"  -Force
+            }
+            if (Test-Path $cabFolder\SPP) {
+                Move-Item $cabFolder\SPP\*.evtx "$tempfolder\EventLogs"  -Force
+                Move-Item $cabFolder\SPP\WPAKeys* "$tempfolder\Registry"  -Force
+            }
+          
+            Move-Item "$cabFolder\*registry*" "$tempfolder\Registry"
+            
+            Move-Item "$cabFolder\DeviceHash*"   "$tempfolder"
+            Move-Item "$cabFolder\MDMDiag*"      "$tempfolder"
+            Move-Item "$cabFolder\systeminfo*"   "$tempfolder"
+
+
+            $SideCar = Join-Path $tempfolder Intune_Management_Extension_Logs
+             
+            Move-Item $cabFolder\*intunemanagementextension*.log $SideCar  -Force
+            Move-Item $cabFolder\*agentexecutor*.log $SideCar  -Force
+            Move-Item $cabFolder\*sensor*.log $SideCar  -Force
+            Move-Item $cabFolder\*clienthealth*.log $SideCar  -Force
+
+            if (Test-Path "$cabFolder\*.etl") {
+                Move-Item "$cabFolder\*.etl" "$tempfolder\z_ETL_Logs" -Force
+            }
+
+        }
+
+
     }
 
 
@@ -310,8 +371,8 @@ foreach ( $diagfolder  in $diagfolders) {
        $newFileName = ""
        $newFileName = Parse_Outputlog -outputlogPath "$fullDiagPath\output.log"
 
-       if ( ($newFileName -match "metadata_") -or ($newFileName -match "Unknow_Command_Result") ){
-            Copy-Item "$fullDiagPath\output.log" "$tempfolder\MetaData\$newFileName"  
+       if ( ($newFileName -match "metadata_") -or ($newFileName -match "Unknown_Command_Result") ){
+            Copy-Item "$fullDiagPath\output.log" "$tempfolder\z_MetaData\$newFileName"  
             }
        else {
             Copy-Item "$fullDiagPath\output.log" "$tempfolder\$newFileName"
@@ -321,7 +382,9 @@ foreach ( $diagfolder  in $diagfolders) {
 }
 # cleanup 
 try {
-    $null = Remove-Item $SourcePath -Recurse -Force
+    if ($SourcePath -ne $PWD) {
+        $null = Remove-Item $SourcePath -Recurse -Force
+    }
 }
 catch [System.IO.IOException] {
     # something grabbed a file handle.  Usually AV.  Wait and retry

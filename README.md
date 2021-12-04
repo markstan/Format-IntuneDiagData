@@ -39,7 +39,7 @@ Q: Where is the data stored?
 
 A: Files are extracted to the current folder by default in a subfolder named **IntuneDeviceData**.
 
-Q:  I'd like to add addtional files to the collected data.  Where can I suggest changes to this feature?
+Q:  I'd like to add additional files to the collected data.  Where can I suggest changes to this feature?
 
 A:  The best way to make this kind of request is through your Microsoft account team.  They can assist you with filing a design change request.
 
