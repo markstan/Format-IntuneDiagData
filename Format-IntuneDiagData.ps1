@@ -7,7 +7,7 @@ Format-IntuneDiagData.ps1 (FIDD) is a utility script to extract and organize zip
 Author:       Mark Stanfill
 Email:        markstan@microsoft.com
 Date created: 10/27/2021
-Last update:  1/4/2021
+Last update:  1/4/2022
 Version:      2022.1.1
   
 

@@ -57,8 +57,18 @@ Q: What are the files in the metadata folder?
 
 A: Metadata contains output that the script is either unable to detect the contents of (zero-byte files, command line stdout output, etc.). If you cannot find output that you expect, look here in the Unknown_Command_Result_* files.
 
+## Change Log
+
+### 1.4.2022
+
+* Prevent accidental registry import by renaming all .reg files to .txt extension
+
+* Bugfix for devices early in AP setup with only cab information
+
+* Add debug log
 
 ## Copyright
+
 Copyright (c) 2017 Microsoft. All rights reserved.
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
