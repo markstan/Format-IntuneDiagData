@@ -7,9 +7,8 @@ Format-IntuneDiagData.ps1 (FIDD) is a utility script to extract and organize zip
 Author:       Mark Stanfill
 Email:        markstan@microsoft.com
 Date created: 10/27/2021
-Last update:  12/4/2021
-Version:      2021.12.1
-
+Last update:  1/4/2021
+Version:      2022.1.1
   
 
 .COPYRIGHT
@@ -34,6 +33,8 @@ Param (
 
 $RIDDversion = "2021.12.1" 
 $ErrorActionPreference = "Stop" 
+$FIDDlog = Join-Path $PWD "FIDD_debug.txt"
+Try{Start-transcript $FIDDlog -ErrorAction Stop}catch{Start-Transcript $FIDDlog}
 
 function Get-RegPath {
     param (
@@ -52,7 +53,7 @@ function Get-RegPath {
                 $parsedLine = $line -replace "[\[\]]", ""
                 $parsedLine = $parsedLine -replace "\\", "_"
                 $parsedLine = $parsedLine -replace " ", "_"
-                $parsedLine += ".reg"
+                $parsedLine += ".txt"
                 $parsedLine
                 break
                 }
@@ -252,6 +253,11 @@ foreach ( $diagfolder  in $diagfolders) {
         
     }
 
+    # move contents of $windir event logs
+    elseif (Test-Path "$fullDiagPath\*.evtx") {
+        Copy-Item "$fullDiagPath\*.evtx" "$tempfolder\EventLogs" -Force
+    }
+
     # ### Windows Update
 
     elseif (Test-Path "$fullDiagPath\windowsupdate.*.etl") {
@@ -277,7 +283,7 @@ foreach ( $diagfolder  in $diagfolders) {
 
     elseif (Test-Path "$fullDiagPath\00000*-00000*.log") {
         $MeasuredBoot = Join-Path $tempfolder MeasuredBoot_Logs
-        $null = mkdir $MeasuredBoot
+        $null = New-Item $MeasuredBoot -ItemType Directory -Force
         Copy-Item $fullDiagPath\* $MeasuredBoot
     }
 
@@ -285,7 +291,7 @@ foreach ( $diagfolder  in $diagfolders) {
 
     elseif (Test-Path "$fullDiagPath\intunemanagementextension.log") {
         $SideCar = Join-Path $tempfolder Intune_Management_Extension_Logs
-        $null = mkdir $SideCar -Force
+        $null = New-Item $SideCar -ItemType Directory -Force
         Copy-Item $fullDiagPath\*intunemanagementextension*.log $SideCar
         Copy-Item $fullDiagPath\*agentexecutor*.log $SideCar
         Copy-Item $fullDiagPath\*sensor*.log $SideCar
@@ -295,7 +301,7 @@ foreach ( $diagfolder  in $diagfolders) {
 
     elseif (Test-Path "$fullDiagPath\diagnosticlogcsp_collector_autopilot*.etl") {
         $ApETLs = Join-Path $tempfolder z_ETL_Logs
-        $null = mkdir $ApETLs  -Force
+        $null = New-Item $ApETLs  -ItemType Directory -Force
         Copy-Item $fullDiagPath\* $ApETLs
     }
 
@@ -340,22 +346,34 @@ foreach ( $diagfolder  in $diagfolders) {
                 Move-Item $cabFolder\SPP\WPAKeys* "$tempfolder\Registry"  -Force
             }
           
-            Move-Item "$cabFolder\*registry*" "$tempfolder\Registry"
-            
+            $regFileName = Get-Item  "$cabFolder\*registry*"
+            if ($regFileName ) {
+                
+                $regFileNameTxt = $regFileName.Name -replace "\.reg", ".txt"
+                "*** $($regFileName.FullName )"
+                "--- $tempfolder\Registry\$regFileNameTxt"
+                Move-Item $regFileName.FullName "$tempfolder\Registry\$regFileNameTxt"
+                }
             Move-Item "$cabFolder\DeviceHash*"   "$tempfolder"
             Move-Item "$cabFolder\MDMDiag*"      "$tempfolder"
             Move-Item "$cabFolder\systeminfo*"   "$tempfolder"
 
 
             $SideCar = Join-Path $tempfolder Intune_Management_Extension_Logs
-             
+            if (-not (Test-Path $SideCar) ) {
+                $null = New-Item $SideCar -ItemType Directory -Force
+                 }
             Move-Item $cabFolder\*intunemanagementextension*.log $SideCar  -Force
             Move-Item $cabFolder\*agentexecutor*.log $SideCar  -Force
             Move-Item $cabFolder\*sensor*.log $SideCar  -Force
             Move-Item $cabFolder\*clienthealth*.log $SideCar  -Force
 
+            $etlPath = Join-Path $tempfolder "z_ETL_Logs"
             if (Test-Path "$cabFolder\*.etl") {
-                Move-Item "$cabFolder\*.etl" "$tempfolder\z_ETL_Logs" -Force
+                if (-not (Test-Path $etlPath) ) {
+                    $null = New-Item $etlPath -ItemType Directory -Force
+                 }
+                Move-Item "$cabFolder\*.etl" $etlPath  -Force
             }
 
         }
@@ -367,7 +385,7 @@ foreach ( $diagfolder  in $diagfolders) {
     # ### Command output
 
     elseif (Test-Path "$fullDiagPath\output.log") {
-       # type $fullDiagPath\output.log
+     
        $newFileName = ""
        $newFileName = Parse_Outputlog -outputlogPath "$fullDiagPath\output.log"
 
@@ -403,6 +421,9 @@ catch {
     Write-Output $Error[0]
 
 }
+# FIDD debug log
+Stop-Transcript
+Move-Item $FIDDlog $tempfolder\z_MetaData
 
 # show output folder
 Start-Process $tempfolder
