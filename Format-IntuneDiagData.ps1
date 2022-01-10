@@ -7,8 +7,8 @@ Format-IntuneDiagData.ps1 (FIDD) is a utility script to extract and organize zip
 Author:       Mark Stanfill
 Email:        markstan@microsoft.com
 Date created: 10/27/2021
-Last update:  1/4/2022
-Version:      2022.1.1
+Last update:  1/9/2022
+Version:      2022.1.2
   
 
 .COPYRIGHT
@@ -17,8 +17,7 @@ See LICENSE in the project root for license information.
 #>
 
 [CmdletBinding()]
-Param (
-
+Param ( 
     # location of extracted data.  Source and destination to current folder if not specified
     [Alias("Folder")]
     $SourcePath = $PWD,           # location of zip file  
@@ -26,12 +25,12 @@ Param (
     $ArchiveName,                 # name of zip file
     [Alias("Out")]
     $OutFolder  = $PWD,           # location to create output folder
-    [switch]$NoUnzip,             # do not extract zip file if present.  Use if zip file exists and has aleady been extracted
+ 
     [switch]$LeaveCABs            # retain folder structure for extracted MMDDiagnostics and other cab-based collectors 
 )
  
 
-$RIDDversion = "2021.12.1" 
+$FIDDversion = "2021.12.1" 
 $ErrorActionPreference = "Stop" 
 $FIDDlog = Join-Path $PWD "FIDD_debug.txt"
 Try{Start-transcript $FIDDlog -ErrorAction Stop}catch{Start-Transcript $FIDDlog}
@@ -136,6 +135,7 @@ function Parse_Outputlog {
 }
 
 function New-DiagFolderStructure {
+    [CmdletBinding(SupportsShouldProcess)]
     param( 
         $tempfolder
     )
@@ -174,7 +174,7 @@ function Test-AndExpandArchive {
             $ArchiveName = Get-Item ".\DiagLogs*.zip"
     
             if ($ArchiveName.count -gt 1) {
-                Write-Host "More than 1 Diaglogs*.zip file found.  Please specify file name with  -ArchiveName command line parameter."  -ForegroundColor Red
+                Write-Error "More than 1 Diaglogs*.zip file found.  Please specify file name with  -ArchiveName command line parameter."   
                 Exit
             }
             else {
@@ -183,12 +183,12 @@ function Test-AndExpandArchive {
             $folderName = [System.IO.Path]::GetFileNameWithoutExtension($ArchiveName)
         }
         elseif (Test-IsExpandedFolderStructure) {
-            Write-Host "Expanded zip structure detected"
+            Write-Output "Expanded zip structure detected"
             $folderName = $PWD
         }
         else {
             
-            Write-Host "Unable to locate zip file.  Please check that the file exists in the current directory or specify the -ArchiveName command line parameter."  -ForegroundColor Red
+            Write-Error "Unable to locate zip file.  Please check that the file exists in the current directory or specify the -ArchiveName command line parameter."   
             Exit -1
         }
     }
@@ -219,18 +219,24 @@ function Move-EventLogData {
 }
 
 # REGION Main
-Write-Output "Starting Format-IntuneDiagData version $RIDDversion."
+Write-Output "Starting Format-IntuneDiagData version $FIDDversion."
 
 $tempfolder =  Join-Path $OutFolder "IntuneDeviceData"
 $null = New-DiagFolderStructure -tempfolder $tempfolder 
 $session  = New-Object -TypeName System.Diagnostics.Eventing.Reader.EventLogSession   # For event log commands
 
-$SourcePath = Test-AndExpandArchive
+# use archive name if specified; otherwise, the function will assume that it is a file name DiagLogs*.zip in the current folder
+if ($ArchiveName) {
+        Test-AndExpandArchive
+    }
+else {
+    $SourcePath = Test-AndExpandArchive
+    }
 
 $diagfolders = @()
 $diagfolders = Get-ChildItem $SourcePath -Directory
  
-
+# TODO - move logic to functions
 
 foreach ( $diagfolder  in $diagfolders) {
     
@@ -412,8 +418,7 @@ catch [System.IO.IOException] {
         $null = Remove-Item $SourcePath -Recurse -Force   -ErrorAction SilentlyContinue
     }
     if ( Test-Path $SourcePath ) {
-        Write-Host "Warning: Format-IntuneDiagData.ps1 was unable to remove all or part of $PWD\$SourcePath.  Please remove this folder manually." `
-            -ForegroundColor Yellow
+        Write-Output "*** Warning: Format-IntuneDiagData.ps1 was unable to remove all or part of $PWD\$SourcePath.  Please remove this folder manually." 
     }
 }
 catch {
