@@ -35,6 +35,46 @@ $ErrorActionPreference = "Stop"
 $FIDDlog = Join-Path $PWD "FIDD_debug.txt"
 Try{Start-transcript $FIDDlog -ErrorAction Stop}catch{Start-Transcript $FIDDlog}
 
+function Get-NewFileNameIfExists
+{
+    [CmdletBinding()]
+    PARAM
+    (
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [ValidateScript({-not([string]::IsNullOrEmpty($_)) -or ($_.Trim().Length -le 0)})]
+        [string] $FileName
+    )
+    PROCESS 
+    {
+        if(Test-Path($FileName))
+        {
+            $FileNameBackup = $FileName
+            
+            [int] $duplicateFilenameCounter = 0;
+            while(Test-Path($FileName))
+            {
+                $duplicateFilenameCounter += 1
+                $FileName = $FileNameBackup
+                            
+                if($FileName.LastIndexOf('.') -ne -1) #Files
+                {
+                    $FileName = $FileName.Insert($FileName.LastIndexOf('.'), (" ({0})" -f $duplicateFilenameCounter))
+                }
+                else #Directory/File without extension
+                {
+                    $FileName = "$FileName ({0})" -f $duplicateFilenameCounter
+                }
+            }
+        }
+        else
+        {
+            New-Item -ItemType Directory -Force -Path (Split-Path $FileName) | Out-Null
+        }
+
+        return $FileName
+    }
+}
+
 function Get-RegPath {
     param (
             $RegFilePath 
@@ -352,17 +392,24 @@ foreach ( $diagfolder  in $diagfolders) {
                 Move-Item $cabFolder\SPP\WPAKeys* "$tempfolder\Registry"  -Force
             }
           
-            $regFileName = Get-Item  "$cabFolder\*registry*"
-            if ($regFileName ) {
+            $regFileNames = Get-Item  "$cabFolder\*registry*"
+            if ($regFileNames ) {
                 
-                $regFileNameTxt = $regFileName.Name -replace "\.reg", ".txt"
-                "*** $($regFileName.FullName )"
-                "--- $tempfolder\Registry\$regFileNameTxt"
-                Move-Item $regFileName.FullName "$tempfolder\Registry\$regFileNameTxt"
+                foreach ($regFileName in $regFileNames) {
+                    $regFileNameTxt = $regFileName.Name -replace "\.reg", ".txt"
+                    Write-Output "*** $($regFileName.FullName )"
+                    Write-Output "--- $tempfolder\Registry\$regFileNameTxt"
+                
+                    if (test-path "$tempfolder\Registry\$regFileNameTxt"){
+                        $regFileNameTxt = $regFileNameTxt | Get-NewFileNameIfExists
+                        Write-Output "____ $regFileNameTxt"
+                        }
+                    Move-Item $regFileName.FullName "$tempfolder\Registry\$regFileNameTxt"
+                    }
                 }
-            Move-Item "$cabFolder\DeviceHash*"   "$tempfolder"
-            Move-Item "$cabFolder\MDMDiag*"      "$tempfolder"
-            Move-Item "$cabFolder\systeminfo*"   "$tempfolder"
+            Move-Item "$cabFolder\DeviceHash*"   "$tempfolder" -Force
+            Move-Item "$cabFolder\MDMDiag*"      "$tempfolder" -Force
+            Move-Item "$cabFolder\systeminfo*"   "$tempfolder" -Force
 
 
             $SideCar = Join-Path $tempfolder Intune_Management_Extension_Logs
