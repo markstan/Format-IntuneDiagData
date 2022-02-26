@@ -7,8 +7,8 @@ Format-IntuneDiagData.ps1 (FIDD) is a utility script to extract and organize zip
 Author:       Mark Stanfill
 Email:        markstan@microsoft.com
 Date created: 10/27/2021
-Last update:  1/9/2022
-Version:      2022.1.2
+Last update:  2/26/2022
+Version:      2022.2.26
   
 
 .COPYRIGHT
@@ -235,6 +235,7 @@ function Test-AndExpandArchive {
  
     else {
         Expand-Archive $ArchiveName -Force
+        $folderName = [System.IO.Path]::GetFileNameWithoutExtension($ArchiveName)
     }
     # return folder name
     $folderName
@@ -265,13 +266,9 @@ $tempfolder =  Join-Path $OutFolder "IntuneDeviceData"
 $null = New-DiagFolderStructure -tempfolder $tempfolder 
 $session  = New-Object -TypeName System.Diagnostics.Eventing.Reader.EventLogSession   # For event log commands
 
-# use archive name if specified; otherwise, the function will assume that it is a file name DiagLogs*.zip in the current folder
-if ($ArchiveName) {
-        Test-AndExpandArchive
-    }
-else {
-    $SourcePath = Test-AndExpandArchive
-    }
+ 
+$SourcePath = Test-AndExpandArchive
+
 
 $diagfolders = @()
 $diagfolders = Get-ChildItem $SourcePath -Directory
