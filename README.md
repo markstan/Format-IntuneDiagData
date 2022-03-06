@@ -59,7 +59,7 @@ A: Metadata contains output that the script is either unable to detect the conte
 
 ## Future improvements
 
-Planned future additions to FIDD.  Please feel free to suggest (or contribute!) additional functionality and features.  I'd love [to hear](mailto://markstan@microsoft.com&subject=FIDD%20suggestions) how you use FIDD and what I can do to make your job easier!
+Planned future additions to FIDD.  Please feel free to suggest (or contribute!) additional functionality and features.  I'd love [to hear](mailto://markstan@microsoft.com?subject=FIDD%20suggestions) how you use FIDD and what I can do to make your job easier!
 
 ### Shell integration
 
