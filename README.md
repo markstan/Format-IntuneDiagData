@@ -57,6 +57,16 @@ Q: What are the files in the metadata folder?
 
 A: Metadata contains output that the script is either unable to detect the contents of (zero-byte files, command line stdout output, etc.). If you cannot find output that you expect, look here in the Unknown_Command_Result_* files.
 
+## Future improvements
+
+Planned future additions to FIDD.  Please feel free to suggest (or contribute!) additional functionality and features.  I'd love [to hear](mailto://markstan@microsoft.com&subject=FIDD%20suggestions) how you use FIDD and what I can do to make your job easier!
+
+### Shell integration
+
+Right-click menu action in Explorer to open the zip file with FIDD.  1) Option to unzip and 2) Option to unzip and open a PowerShell window in the working directory.
+
+### Add PowerShell profile options to include functions to run FIDD from the command line without needing to know the entire path.  Cleanup and processing options for data.
+
 ## Change Log
 
 ### 1.4.2022
